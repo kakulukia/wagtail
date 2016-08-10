@@ -1,4 +1,4 @@
-from __future__ import unicode_literals
+from __future__ import absolute_import, unicode_literals
 
 import json
 import os
@@ -127,7 +127,7 @@ def get_forms_for_user(user):
 
 class AbstractForm(Page):
     """
-    A Form Page. Pages implementing a form should inhert from it
+    A Form Page. Pages implementing a form should inherit from it
     """
 
     form_builder = FormBuilder

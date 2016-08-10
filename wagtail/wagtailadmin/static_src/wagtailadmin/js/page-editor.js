@@ -1,5 +1,7 @@
 'use strict';
 
+// registerHalloPlugin must be implemented here so it can be used by plugins
+// hooked in with insert_editor_js (and hallo-bootstrap.js runs too late)
 var halloPlugins = {
     halloformat: {},
     halloheadings: {formatBlocks: ['p', 'h2', 'h3', 'h4', 'h5']},
@@ -12,63 +14,6 @@ var halloPlugins = {
 
 function registerHalloPlugin(name, opts) {
     halloPlugins[name] = (opts || {});
-}
-
-function makeRichTextEditable(id) {
-    var input = $('#' + id);
-    var richText = $('<div class="richtext"></div>').html(input.val());
-    richText.insertBefore(input);
-    input.hide();
-
-    var removeStylingPending = false;
-    function removeStyling() {
-        /* Strip the 'style' attribute from spans that have no other attributes.
-        (we don't remove the span entirely as that messes with the cursor position,
-        and spans will be removed anyway by our whitelisting)
-        */
-        $('span[style]', richText).filter(function() {
-            return this.attributes.length === 1;
-        }).removeAttr('style');
-        removeStylingPending = false;
-    }
-
-    var closestObj = input.closest('.object');
-
-    richText.hallo({
-        toolbar: 'halloToolbarFixed',
-        toolbarCssClass: (closestObj.hasClass('full')) ? 'full' : (closestObj.hasClass('stream-field')) ? 'stream-field' : '',
-        plugins: halloPlugins
-    }).bind('hallomodified', function(event, data) {
-        input.val(data.content);
-        if (!removeStylingPending) {
-            setTimeout(removeStyling, 100);
-            removeStylingPending = true;
-        }
-    }).bind('paste', function(event, data) {
-        setTimeout(removeStyling, 1);
-    /* Animate the fields open when you click into them. */
-    }).bind('halloactivated', function(event, data) {
-        $(event.target).addClass('expanded', 200, function(e) {
-            /* Hallo's toolbar will reposition itself on the scroll event.
-            This is useful since animating the fields can cause it to be
-            positioned badly initially. */
-            $(window).trigger('scroll');
-        });
-    }).bind('hallodeactivated', function(event, data) {
-        $(event.target).removeClass('expanded', 200, function(e) {
-            $(window).trigger('scroll');
-        });
-    });
-}
-
-function insertRichTextDeleteControl(elem) {
-    var a = $('<a class="icon icon-cross text-replace delete-control">Delete</a>');
-    $(elem).addClass('rich-text-deletable').prepend(a);
-    a.click(function() {
-        $(elem).fadeOut(function() {
-            $(elem).remove();
-        });
-    });
 }
 
 // Compare two date objects. Ignore minutes and seconds.
@@ -388,11 +333,13 @@ function initCollapsibleBlocks() {
 
 function initKeyboardShortcuts() {
     Mousetrap.bind(['mod+p'], function(e) {
+        disableDirtyFormCheck();
         $('.action-preview').trigger('click');
         return false;
     });
 
     Mousetrap.bind(['mod+s'], function(e) {
+        disableDirtyFormCheck();
         $('.action-save').trigger('click');
         return false;
     });
@@ -409,10 +356,6 @@ $(function() {
     initCollapsibleBlocks();
     initKeyboardShortcuts();
 
-    $('.richtext [contenteditable="false"]').each(function() {
-        insertRichTextDeleteControl(this);
-    });
-
     /* Set up behaviour of preview button */
     var previewWindow = null;
     $('.action-preview').click(function(e) {
@@ -425,13 +368,18 @@ $(function() {
 
         previewWindow = window.open($this.data('placeholder'), $this.data('windowname'));
 
-        if (/MSIE/.test(navigator.userAgent)) {
-            // If IE, load contents immediately without fancy effects
-            submitPreview.call($this, false);
-        } else {
-            previewWindow.onload = function() {
+        if (previewWindow.addEventListener) {
+            previewWindow.addEventListener('load', function() {
                 submitPreview.call($this, true);
-            }
+            }, false);
+        } else if (previewWindow.attachEvent) {
+            // for IE
+            previewWindow.attachEvent('onload', function() {
+                submitPreview.call($this, true);
+            }, false);
+        } else {
+            // Can't trap onload event, so load contents immediately without fancy effects
+            submitPreview.call($this, false);
         }
 
         function submitPreview(enhanced) {
@@ -454,17 +402,18 @@ $(function() {
                             var hideTimeout = setTimeout(function() {
                                 previewDoc.getElementById('loading-spinner-wrapper').className += ' remove';
                                 clearTimeout(hideTimeout);
-                            })
+                            });
 
  // just enough to give effect without adding discernible slowness
                         } else {
                             previewDoc.open();
                             previewDoc.write(data);
-                            previewDoc.close()
+                            previewDoc.close();
                         }
 
                     } else {
                         previewWindow.close();
+                        disableDirtyFormCheck();
                         document.open();
                         document.write(data);
                         document.close();

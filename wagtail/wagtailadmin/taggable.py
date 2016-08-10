@@ -1,3 +1,5 @@
+from __future__ import absolute_import, unicode_literals
+
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count
 from taggit.models import Tag
@@ -18,10 +20,6 @@ class TagSearchable(index.Indexed):
             index.SearchField('name', partial_match=True, boost=10),
         ]),
     ], name='search_fields on TagSearchable subclasses')
-
-    @classmethod
-    def get_indexed_objects(cls):
-        return super(TagSearchable, cls).get_indexed_objects().prefetch_related('tagged_items__tag')
 
     @classmethod
     def popular_tags(cls):

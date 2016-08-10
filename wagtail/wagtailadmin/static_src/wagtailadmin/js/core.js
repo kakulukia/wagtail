@@ -52,6 +52,9 @@ function initTagField(id, autocompleteUrl) {
  *    - alwaysDirty - When set to true the form will always be considered dirty,
  *      prompting the user even when nothing has been changed.
 */
+
+var dirtyFormCheckIsActive = true;
+
 function enableDirtyFormCheck(formSelector, options) {
     var $form = $(formSelector);
     var $ignoredButtons = $form.find(
@@ -64,7 +67,7 @@ function enableDirtyFormCheck(formSelector, options) {
     window.addEventListener('beforeunload', function(event) {
         // Ignore if the user clicked on an ignored element
         var triggeredByIgnoredButton = false;
-        var $trigger = $(event.target.activeElement);
+        var $trigger = $(event.explicitOriginalTarget || document.activeElement);
 
         $ignoredButtons.each(function() {
             if ($(this).is($trigger)) {
@@ -72,11 +75,15 @@ function enableDirtyFormCheck(formSelector, options) {
             }
         });
 
-        if (!triggeredByIgnoredButton && (alwaysDirty || $form.serialize() != initialData)) {
+        if (dirtyFormCheckIsActive && !triggeredByIgnoredButton && (alwaysDirty || $form.serialize() != initialData)) {
             event.returnValue = confirmationMessage;
             return confirmationMessage;
         }
     });
+}
+
+function disableDirtyFormCheck() {
+    dirtyFormCheckIsActive = false;
 }
 
 $(function() {
@@ -216,6 +223,13 @@ $(function() {
         var reEnableAfter = 30;
         var dataName = 'disabledtimeout'
 
+        // Check the form this submit button belongs to (if any)
+        var form = $self.closest('form').get(0);
+        if (form && form.checkValidity && (form.checkValidity() == false)) {
+                 // ^ Check form.checkValidity returns something as it may not be browser compatible
+            return;
+        }
+
         // Disabling a button prevents it submitting the form, so disabling
         // must occur on a brief timeout only after this function returns.
 
@@ -315,7 +329,7 @@ wagtail = (function(document, window, wagtail) {
             return this._dropDowns;
         },
 
-        getByIndex(index) {
+        getByIndex: function(index) {
             return this._dropDowns[index];
         },
 

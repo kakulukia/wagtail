@@ -1,3 +1,5 @@
+from __future__ import absolute_import, unicode_literals
+
 import re
 
 OEMBED_ENDPOINTS = {
@@ -78,7 +80,7 @@ OEMBED_ENDPOINTS = {
     ],
     "http://api.instagram.com/oembed": [
         "^http://instagr\\.am/p/.+$",
-        "^http[s]?://instagram\\.com/p/.+$"
+        "^http[s]?://(?:www\\.)?instagram\\.com/p/.+$"
     ],
     "https://www.slideshare.net/api/oembed/2": [
         "^http://www\\.slideshare\\.net/.+$"
