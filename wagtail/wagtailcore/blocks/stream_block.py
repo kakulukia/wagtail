@@ -33,10 +33,8 @@ class StreamBlockValidationError(ValidationError):
 
 
 class BaseStreamBlock(Block):
-    class Meta:
-        default = []
 
-    def __init__(self, local_blocks=None, **kwargs):
+    def __init__(self, local_blocks=None, child_wrappers=True, **kwargs):
         self._constructor_kwargs = kwargs
 
         super(BaseStreamBlock, self).__init__(**kwargs)
@@ -209,7 +207,7 @@ class BaseStreamBlock(Block):
 
     def render_basic(self, value):
         return format_html_join(
-            '\n', '<div class="block-{1}">{0}</div>',
+            '\n', '<div class="block-{1}">{0}</div>' if child_wrappers else '{0}',
             [(force_text(child), child.block_type) for child in value]
         )
 
@@ -242,6 +240,13 @@ class BaseStreamBlock(Block):
             errors.extend(child_block._check_name(**kwargs))
 
         return errors
+
+    class Meta:
+        # No icon specified here, because that depends on the purpose that the
+        # block is being used for. Feel encouraged to specify an icon in your
+        # descendant block type
+        icon = "placeholder"
+        default = []
 
 
 class StreamBlock(six.with_metaclass(DeclarativeSubBlocksMetaclass, BaseStreamBlock)):

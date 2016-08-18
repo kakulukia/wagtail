@@ -2,7 +2,11 @@ from __future__ import absolute_import, unicode_literals
 
 from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
+from modelcluster.fields import ParentalKey
+from modelcluster.models import ClusterableModel
 
+from wagtail.wagtailadmin.edit_handlers import FieldPanel, InlinePanel
+from wagtail.wagtailcore.fields import RichTextField
 from wagtail.wagtailsearch import index
 from wagtail.wagtailsnippets.models import register_snippet
 
@@ -47,7 +51,7 @@ class RegisterDecorator(models.Model):
 # A snippet model that inherits from index.Indexed can be searched on
 
 @register_snippet
-class SearchableSnippet(models.Model, index.Indexed):
+class SearchableSnippet(index.Indexed, models.Model):
     text = models.CharField(max_length=255)
 
     search_fields = [
@@ -66,3 +70,24 @@ class StandardSnippet(models.Model):
 @register_snippet
 class FancySnippet(models.Model):
     base_form_class = FancySnippetForm
+
+
+@register_snippet
+class FileUploadSnippet(models.Model):
+    file = models.FileField()
+
+
+class RichTextSection(models.Model):
+    snippet = ParentalKey('MultiSectionRichTextSnippet', related_name='sections')
+    body = RichTextField()
+
+    panels = [
+        FieldPanel('body'),
+    ]
+
+
+@register_snippet
+class MultiSectionRichTextSnippet(ClusterableModel):
+    panels = [
+        InlinePanel('sections'),
+    ]

@@ -1,25 +1,23 @@
-from __future__ import unicode_literals
+from __future__ import absolute_import, unicode_literals
 
 import json
-import re
+import os
 
-from unidecode import unidecode
-
+from django.contrib.contenttypes.models import ContentType
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.shortcuts import render
-from django.utils.translation import ugettext_lazy as _
-from django.utils.text import slugify
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.six import text_type
-from django.core.serializers.json import DjangoJSONEncoder
-from django.contrib.contenttypes.models import ContentType
+from django.utils.text import slugify
+from django.utils.translation import ugettext_lazy as _
+from unidecode import unidecode
 
-from wagtail.wagtailcore.models import Page, Orderable, UserPagePermissionsProxy, get_page_models
 from wagtail.wagtailadmin.edit_handlers import FieldPanel
 from wagtail.wagtailadmin.utils import send_mail
+from wagtail.wagtailcore.models import Orderable, Page, UserPagePermissionsProxy, get_page_models
 
 from .forms import FormBuilder
-
 
 FORM_FIELD_CHOICES = (
     ('singleline', _('Single line text')),
@@ -34,9 +32,6 @@ FORM_FIELD_CHOICES = (
     ('date', _('Date')),
     ('datetime', _('Date/time')),
 )
-
-
-HTML_EXTENSION_RE = re.compile(r"(.*)\.(html|jade)")
 
 
 @python_2_unicode_compatible
@@ -132,7 +127,7 @@ def get_forms_for_user(user):
 
 class AbstractForm(Page):
     """
-    A Form Page. Pages implementing a form should inhert from it
+    A Form Page. Pages implementing a form should inherit from it
     """
 
     form_builder = FormBuilder
@@ -140,8 +135,8 @@ class AbstractForm(Page):
     def __init__(self, *args, **kwargs):
         super(AbstractForm, self).__init__(*args, **kwargs)
         if not hasattr(self, 'landing_page_template'):
-            template_wo_ext = re.match(HTML_EXTENSION_RE, self.template).group(1)
-            self.landing_page_template = template_wo_ext + '_landing.' + re.match(HTML_EXTENSION_RE, self.template).group(2)
+            name, ext = os.path.splitext(self.template)
+            self.landing_page_template = name + '_landing' + ext
 
     class Meta:
         abstract = True

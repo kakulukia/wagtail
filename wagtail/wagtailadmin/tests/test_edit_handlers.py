@@ -18,8 +18,8 @@ from wagtail.wagtailadmin.edit_handlers import (
     FieldPanel, InlinePanel, ObjectList, PageChooserPanel, RichTextFieldPanel, TabbedInterface,
     extract_panel_definitions_from_model_class, get_form_for_model)
 from wagtail.wagtailadmin.forms import WagtailAdminModelForm, WagtailAdminPageForm
+from wagtail.wagtailadmin.rich_text import HalloRichTextArea
 from wagtail.wagtailadmin.widgets import AdminAutoHeightTextInput, AdminDateInput, AdminPageChooser
-from wagtail.wagtailcore.fields import RichTextArea
 from wagtail.wagtailcore.models import Page, Site
 from wagtail.wagtailimages.edit_handlers import ImageChooserPanel
 
@@ -58,7 +58,7 @@ class TestGetFormForModel(TestCase):
         # RichTextField - they should retain their default widgets
         EventPageForm = get_form_for_model(EventPage, form_class=WagtailAdminPageForm)
         event_form = EventPageForm()
-        self.assertEqual(type(event_form.fields['body'].widget), RichTextArea)
+        self.assertEqual(type(event_form.fields['body'].widget), HalloRichTextArea)
 
     def test_get_form_for_model_with_specific_fields(self):
         EventPageForm = get_form_for_model(
@@ -159,16 +159,21 @@ class TestPageEditHandlers(TestCase):
             "ValidatedPage.base_form_class does not extend WagtailAdminPageForm",
             hint="Ensure that wagtail.wagtailadmin.tests.test_edit_handlers.BadFormClass extends WagtailAdminPageForm",
             obj=ValidatedPage,
-            id='wagtailcore.E002')
+            id='wagtailadmin.E001')
 
         invalid_edit_handler = checks.Error(
             "ValidatedPage.get_edit_handler().get_form_class(ValidatedPage) does not extend WagtailAdminPageForm",
             hint="Ensure that the EditHandler for ValidatedPage creates a subclass of WagtailAdminPageForm",
             obj=ValidatedPage,
-            id='wagtailcore.E003')
+            id='wagtailadmin.E002')
 
         with mock.patch.object(ValidatedPage, 'base_form_class', new=BadFormClass):
-            errors = ValidatedPage.check()
+            errors = checks.run_checks()
+
+            # ignore CSS loading errors (to avoid spurious failures on CI servers that
+            # don't build the CSS)
+            errors = [e for e in errors if e.id != 'wagtailadmin.W001']
+
             self.assertEqual(errors, [invalid_base_form, invalid_edit_handler])
 
     @clear_edit_handler(ValidatedPage)

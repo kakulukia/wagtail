@@ -3,6 +3,7 @@ from __future__ import absolute_import, unicode_literals
 from itertools import groupby
 
 from django import forms
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
 from django.db import transaction
@@ -20,13 +21,18 @@ User = get_user_model()
 
 # The standard fields each user model is expected to have, as a minimum.
 standard_fields = set(['email', 'first_name', 'last_name', 'is_superuser', 'groups'])
+# Custom fields
+if hasattr(settings, 'WAGTAIL_USER_CUSTOM_FIELDS'):
+    custom_fields = set(settings.WAGTAIL_USER_CUSTOM_FIELDS)
+else:
+    custom_fields = set()
 
 
 class UsernameForm(forms.ModelForm):
     """
-    Intelligently sets up the username field if it is infact a username. If the
+    Intelligently sets up the username field if it is in fact a username. If the
     User model has been swapped out, and the username field is an email or
-    something else, dont touch it.
+    something else, don't touch it.
     """
     def __init__(self, *args, **kwargs):
         super(UsernameForm, self).__init__(*args, **kwargs)
@@ -78,7 +84,7 @@ class UserCreationForm(UsernameForm):
 
     class Meta:
         model = User
-        fields = set([User.USERNAME_FIELD]) | standard_fields
+        fields = set([User.USERNAME_FIELD]) | standard_fields | custom_fields
         widgets = {
             'groups': forms.CheckboxSelectMultiple
         }
@@ -150,7 +156,7 @@ class UserEditForm(UsernameForm):
 
     class Meta:
         model = User
-        fields = set([User.USERNAME_FIELD, "is_active"]) | standard_fields
+        fields = set([User.USERNAME_FIELD, "is_active"]) | standard_fields | custom_fields
         widgets = {
             'groups': forms.CheckboxSelectMultiple
         }
@@ -295,7 +301,9 @@ class BaseGroupPagePermissionFormSet(forms.BaseFormSet):
         pages = [
             form.cleaned_data['page']
             for form in self.forms
-            if form not in self.deleted_forms
+            # need to check for presence of 'page' in cleaned_data,
+            # because a completely blank form passes validation
+            if form not in self.deleted_forms and 'page' in form.cleaned_data
         ]
         if len(set(pages)) != len(pages):
             # pages list contains duplicates
@@ -309,7 +317,10 @@ class BaseGroupPagePermissionFormSet(forms.BaseFormSet):
             )
 
         # get a set of (page, permission_type) tuples for all ticked permissions
-        forms_to_save = [form for form in self.forms if form not in self.deleted_forms]
+        forms_to_save = [
+            form for form in self.forms
+            if form not in self.deleted_forms and 'page' in form.cleaned_data
+        ]
 
         final_permission_records = set()
         for form in forms_to_save:
