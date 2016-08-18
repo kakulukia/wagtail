@@ -34,7 +34,7 @@ class StreamBlockValidationError(ValidationError):
 
 class BaseStreamBlock(Block):
 
-    def __init__(self, local_blocks=None, child_wrappers=True, **kwargs):
+    def __init__(self, local_blocks=None, **kwargs):
         self._constructor_kwargs = kwargs
 
         super(BaseStreamBlock, self).__init__(**kwargs)
@@ -207,7 +207,7 @@ class BaseStreamBlock(Block):
 
     def render_basic(self, value):
         return format_html_join(
-            '\n', '<div class="block-{1}">{0}</div>' if child_wrappers else '{0}',
+            '\n', '<div class="block-{1}">{0}</div>',
             [(force_text(child), child.block_type) for child in value]
         )
 
